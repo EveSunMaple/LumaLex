@@ -1,0 +1,12 @@
+.DS_Store
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+LumaLex.xcodeproj/
+.build/
+DerivedData/
+server/node_modules/
+.env
+.env.*
+*.p8
+*.mobileprovision

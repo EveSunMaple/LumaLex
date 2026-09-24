@@ -1,0 +1,27 @@
+name: iOS
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test API
+        run: npm test
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate project
+        run: xcodegen generate
+      - name: Build for iPhone SDK
+        run: xcodebuild build -project LumaLex.xcodeproj -scheme LumaLex -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO
+      - name: Select simulator
+        id: simulator
+        run: |
+          device_id=$(xcrun simctl list devices available -j | ruby -rjson -e 'devices = JSON.parse(STDIN.read).fetch("devices").values.flatten; puts devices.find { |device| device["name"].start_with?("iPhone") }.fetch("udid")')
+          echo "id=$device_id" >> "$GITHUB_OUTPUT"
+      - name: Test
+        run: xcodebuild test -project LumaLex.xcodeproj -scheme LumaLex -destination 'platform=iOS Simulator,id=${{ steps.simulator.outputs.id }}' CODE_SIGNING_ALLOWED=NO
