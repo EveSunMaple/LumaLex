@@ -5,6 +5,7 @@
 LumaLex.xcodeproj/
 .build/
 DerivedData/
+project.local.yml
 server/node_modules/
 .env
 .env.*

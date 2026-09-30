@@ -49,6 +49,29 @@ npm test
 
 测试命令中的模拟器名称可替换为当前可用设备；CI 会自动选择模拟器。生成的 `.xcodeproj` 不纳入版本控制，`project.yml` 才是工程配置来源。`npm test` 在 Windows 上可运行虚拟词汇量测验、演示素材和后端测试，但不能代替 iOS 构建或实机测试。
 
+## 真机安装与签名
+
+### 在 Mac 上（免费 Apple ID 即可）
+
+1. Xcode → Settings → Accounts 登录 Apple ID（免费 Personal Team 即可）。
+2. 在仓库根目录创建 `project.local.yml`（已加入 `.gitignore`，不会提交），把 `DEVELOPMENT_TEAM` 替换为你的 Team ID（Xcode → Settings → Accounts → 账户详情中可查）：
+
+```yaml
+include:
+  - project.yml
+settings:
+  base:
+    DEVELOPMENT_TEAM: "你的TeamID"
+```
+
+3. 运行 `xcodegen generate --spec project.local.yml` 并打开生成的工程，为 LumaLex 与 LumaLexWidgets 两个 target 在 Signing & Capabilities 里选择你的 Team。若免费签名提示 bundle ID 不可用（可能已被其他 Apple ID 占用），在 `project.local.yml` 里同时覆盖 `PRODUCT_BUNDLE_IDENTIFIER`（如 `com.yourname.lumalex`）并重新生成。
+4. iPhone 连接 Mac，在手机的 设置 → 隐私与安全性 中开启开发者模式，然后直接 Run。若安装后提示“不受信任的开发者”，到 设置 → 通用 → VPN与设备管理 信任你的证书。
+5. 免费签名 7 天过期，过期后重新 Run 即可续期；每台设备最多 3 个免费签名应用。
+
+### 没有 Mac 时（Windows 侧载）
+
+仓库的 GitHub Actions 在每次推送后都会构建**未签名 IPA**，可在对应 workflow 运行页面的 Artifacts 中下载 `LumaLex-unsigned-ipa`。在 Windows 上安装 [Sideloadly](https://sideloadly.io)（需先安装 Apple Devices 应用），iPhone 连接电脑，把未签名 IPA 拖入 Sideloadly 并登录 Apple ID，即可自动重签名安装（同样 7 天有效期）。长期分发或 TestFlight 需要付费 Apple Developer Program 账号。
+
 ## 可选后端
 
 `server/` 是不依赖第三方运行时包的 Node.js API。配置 `GEMINI_API_KEY`、`LUMALEX_APP_TOKEN`，以及可选的 `GEMINI_MODEL` 后，可在该目录运行 `npm start`。服务默认只监听本机；正式部署应通过 HTTPS 暴露，并在应用的 Profile 页面配置服务地址和访问令牌。生产模式下，缺少 `LUMALEX_APP_TOKEN` 时服务不会启动。

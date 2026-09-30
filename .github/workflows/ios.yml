@@ -25,3 +25,16 @@ jobs:
           echo "id=$device_id" >> "$GITHUB_OUTPUT"
       - name: Test
         run: xcodebuild test -project LumaLex.xcodeproj -scheme LumaLex -destination 'platform=iOS Simulator,id=${{ steps.simulator.outputs.id }}' CODE_SIGNING_ALLOWED=NO
+      - name: Package unsigned IPA
+        if: github.event_name != 'pull_request'
+        run: |
+          xcodebuild archive -project LumaLex.xcodeproj -scheme LumaLex -destination 'generic/platform=iOS' -archivePath build/LumaLex.xcarchive CODE_SIGNING_ALLOWED=NO
+          mkdir -p build/Payload
+          cp -R "build/LumaLex.xcarchive/Products/Applications/LumaLex.app" build/Payload/
+          (cd build && zip -qry LumaLex-unsigned.ipa Payload)
+      - name: Upload unsigned IPA
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: LumaLex-unsigned-ipa
+          path: build/LumaLex-unsigned.ipa
