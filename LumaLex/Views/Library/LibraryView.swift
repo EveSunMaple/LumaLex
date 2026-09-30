@@ -6,8 +6,6 @@ struct LibraryView: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var player: AudioPlayerService
     @Query(sort: \AudioDocument.importedAt, order: .reverse) private var audio: [AudioDocument]
-    @Query private var transcripts: [Transcript]
-    @Query private var segments: [SubtitleSegment]
     @State private var importingAudio = false
     @State private var isBusy = false
     @State private var errorMessage: String?
@@ -74,11 +72,23 @@ struct LibraryView: View {
         let selected = offsets.map { audio[$0] }
         for document in selected {
             if player.documentID == document.id { player.stop() }
-            let ownedTranscripts = transcripts.filter { $0.audioDocumentID == document.id }
-            let ids = Set(ownedTranscripts.map(\.id))
-            for segment in segments where ids.contains(segment.transcriptID) { modelContext.delete(segment) }
-            for transcript in ownedTranscripts { modelContext.delete(transcript) }
-            modelContext.delete(document)
+            do {
+                let documentID = document.id
+                let ownedTranscripts = try modelContext.fetch(
+                    FetchDescriptor<Transcript>(predicate: #Predicate { $0.audioDocumentID == documentID }))
+                let transcriptIDs = ownedTranscripts.map(\.id)
+                for transcript in ownedTranscripts { modelContext.delete(transcript) }
+                if !transcriptIDs.isEmpty {
+                    let ownedSegments = try modelContext.fetch(
+                        FetchDescriptor<SubtitleSegment>(predicate: #Predicate { transcriptIDs.contains($0.transcriptID) }))
+                    for segment in ownedSegments { modelContext.delete(segment) }
+                }
+                modelContext.delete(document)
+            } catch {
+                modelContext.rollback()
+                errorMessage = error.localizedDescription
+                return
+            }
         }
         do {
             try modelContext.save()

@@ -5,12 +5,6 @@ struct ProfileView: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var player: AudioPlayerService
     @Query private var profiles: [UserProfile]
-    @Query private var audio: [AudioDocument]
-    @Query private var transcripts: [Transcript]
-    @Query private var segments: [SubtitleSegment]
-    @Query private var vocabulary: [VocabularyItem]
-    @Query private var known: [KnownExpression]
-    @Query private var reviews: [ReviewRecord]
     @AppStorage("backendURL") private var backendURL = ""
     @AppStorage("lockScreenSubtitles") private var lockScreenSubtitles = false
     @State private var backendToken = ""
@@ -60,16 +54,16 @@ struct ProfileView: View {
     }
 
     private func deleteAll() {
-        let paths = audio.map(\.localRelativePath)
         player.stop()
-        for item in reviews { modelContext.delete(item) }
-        for item in vocabulary { modelContext.delete(item) }
-        for item in known { modelContext.delete(item) }
-        for item in segments { modelContext.delete(item) }
-        for item in transcripts { modelContext.delete(item) }
-        for item in audio { modelContext.delete(item) }
-        for item in profiles { modelContext.delete(item) }
         do {
+            let paths = try modelContext.fetch(FetchDescriptor<AudioDocument>()).map(\.localRelativePath)
+            try modelContext.delete(model: ReviewRecord.self)
+            try modelContext.delete(model: VocabularyItem.self)
+            try modelContext.delete(model: KnownExpression.self)
+            try modelContext.delete(model: SubtitleSegment.self)
+            try modelContext.delete(model: Transcript.self)
+            try modelContext.delete(model: AudioDocument.self)
+            try modelContext.delete(model: UserProfile.self)
             try modelContext.save()
             for path in paths { try? FileManager.default.removeItem(at: AudioStorage.url(for: path)) }
             backendURL = ""
