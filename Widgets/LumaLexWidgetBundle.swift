@@ -20,11 +20,18 @@ private struct LumaLexLiveActivity: Widget {
                 HStack {
                     Text(context.attributes.title).lineLimit(1)
                     Spacer()
-                    Text(String(format: "%d:%02d", context.state.elapsed / 60,
-                                context.state.elapsed % 60))
+                    if context.state.isPlaying {
+                        Text(timerInterval: context.state.elapsedAnchor
+                            .addingTimeInterval(-Double(context.state.elapsed))...Date.distantFuture,
+                             countsDown: false)
+                    } else {
+                        Text(String(format: "%d:%02d", context.state.elapsed / 60,
+                                    context.state.elapsed % 60))
+                    }
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .monospacedDigit()
             }
             .padding()
         } dynamicIsland: { context in

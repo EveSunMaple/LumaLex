@@ -6,6 +6,7 @@ struct LumaLexActivityAttributes: ActivityAttributes {
         let english: String
         let chinese: String
         let elapsed: Int
+        let elapsedAnchor: Date
         let isPlaying: Bool
     }
 

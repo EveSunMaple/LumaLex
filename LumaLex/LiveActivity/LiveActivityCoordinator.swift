@@ -22,7 +22,7 @@ final class LiveActivityCoordinator {
         lastUpdate = now
         let state = LumaLexActivityAttributes.ContentState(
             english: String(english.prefix(220)), chinese: String(chinese.prefix(160)),
-            elapsed: Int(elapsed), isPlaying: isPlaying
+            elapsed: Int(elapsed), elapsedAnchor: now, isPlaying: isPlaying
         )
         let content = ActivityContent(state: state, staleDate: now.addingTimeInterval(90))
         if let activity {
@@ -34,12 +34,15 @@ final class LiveActivityCoordinator {
     }
 
     func end() {
-        self.activity = nil
+        let current = activity
+        activity = nil
         lastEnglish = ""
         lastIsPlaying = false
+        guard let current else { return }
         Task {
-            for activity in Activity<LumaLexActivityAttributes>.activities {
-                await activity.end(nil, dismissalPolicy: .immediate)
+            await current.end(nil, dismissalPolicy: .immediate)
+            for stale in Activity<LumaLexActivityAttributes>.activities where stale.id != current.id {
+                await stale.end(nil, dismissalPolicy: .immediate)
             }
         }
     }
