@@ -1,4 +1,5 @@
 import http from 'node:http';
+import { timingSafeEqual } from 'node:crypto';
 
 const vocabularyKeys = [
   'word', 'lemma', 'ipa', 'part_of_speech', 'chinese', 'definition',
@@ -23,7 +24,7 @@ export function createServer({ apiKey = process.env.GEMINI_API_KEY,
       ].includes(request.url)) {
         return json(response, 404, { error: 'Not found' });
       }
-      if (appToken && request.headers.authorization !== `Bearer ${appToken}`) {
+      if (appToken && !tokensMatch(request.headers.authorization, `Bearer ${appToken}`)) {
         return json(response, 401, { error: 'Unauthorized' });
       }
       const key = request.socket.remoteAddress || 'unknown';
@@ -118,6 +119,18 @@ async function readJSON(request, limit) {
   }
   try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); }
   catch { throw new BadRequest(); }
+}
+
+function tokensMatch(actual, expected) {
+  if (typeof actual !== 'string') return false;
+  const a = Buffer.from(actual);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) {
+    // Burn the comparison cost before revealing a length mismatch.
+    timingSafeEqual(b, b);
+    return false;
+  }
+  return timingSafeEqual(a, b);
 }
 
 function json(response, status, value) {
