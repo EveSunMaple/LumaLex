@@ -220,15 +220,24 @@ struct PlayerView: View {
     }
 
     private func importTranscript(_ url: URL) {
-        do {
+        Task {
+            do {
+                let parsed = try await Self.readAndParseTranscript(url)
+                try saveTranscript(parsed, source: "imported")
+            } catch {
+                modelContext.rollback()
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    private static func readAndParseTranscript(_ url: URL) async throws -> [ParsedSubtitle] {
+        try await Task.detached(priority: .userInitiated) {
             let text = try AudioStorage.readTranscript(from: url)
             let parsed = TranscriptParser.parse(text)
             guard !parsed.isEmpty else { throw TranscriptImportError.noTimedSegments }
-            try saveTranscript(parsed, source: "imported")
-        } catch {
-            modelContext.rollback()
-            errorMessage = error.localizedDescription
-        }
+            return parsed
+        }.value
     }
 
     private func generateTranscript() {
@@ -284,6 +293,14 @@ struct PlayerView: View {
     }
 
     private func saveTranscript(_ parsed: [ParsedSubtitle], source: String) throws {
+        let staleTranscripts = transcripts.filter { $0.audioDocumentID == documentID }
+        let staleTranscriptIDs = Set(staleTranscripts.map(\.id))
+        for transcript in staleTranscripts { modelContext.delete(transcript) }
+        if !staleTranscriptIDs.isEmpty {
+            for segment in allSegments where staleTranscriptIDs.contains(segment.transcriptID) {
+                modelContext.delete(segment)
+            }
+        }
         let transcript = Transcript(audioDocumentID: documentID, source: source)
         modelContext.insert(transcript)
         for item in parsed {
