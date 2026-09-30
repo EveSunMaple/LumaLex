@@ -62,13 +62,16 @@ struct PlayerView: View {
                 Spacer()
             } else if segments.isEmpty {
                 VStack(spacing: 16) {
-                    ContentUnavailableView("No Timed Transcript", systemImage: "text.alignleft",
-                                           description: Text("Import SRT/VTT or generate English subtitles on device."))
+                    ContentUnavailableView("No Subtitles", systemImage: "text.alignleft",
+                                           description: Text("Import a timed SRT or VTT file for this audio. Bilingual files display immediately."))
+                    Button("Import Timed Subtitles", systemImage: "text.badge.plus") {
+                        importingTranscript = true
+                    }
+                    .buttonStyle(.borderedProminent)
                     if transcribing {
                         ProgressView("Transcribing on device")
                     } else {
-                        Button("Generate Transcript") { generateTranscript() }
-                            .buttonStyle(.borderedProminent)
+                        Button("Generate English Instead") { generateTranscript() }
                         if BackendConfiguration.baseURL != nil {
                             Button("Transcribe with Server") { confirmRemoteTranscription = true }
                         }
@@ -117,7 +120,7 @@ struct PlayerView: View {
         .navigationTitle("Player")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            Button("Import Transcript", systemImage: "text.badge.plus") { importingTranscript = true }
+            Button("Import Subtitles", systemImage: "text.badge.plus") { importingTranscript = true }
             if !segments.isEmpty {
                 Button("Retranscribe", systemImage: "waveform.badge.mic") { generateTranscript() }
                     .disabled(transcribing)
